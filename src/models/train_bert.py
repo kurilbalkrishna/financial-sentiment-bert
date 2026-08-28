@@ -1,8 +1,6 @@
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
 
-sample_text = "The company reported strong quarterly earnings."
-tokens = tokenizer(sample_text, padding=True, truncation=True, return_tensors="pt")
-
-print(tokens)
+print(model.config)
