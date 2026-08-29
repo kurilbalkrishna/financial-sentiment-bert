@@ -1,5 +1,8 @@
 from sklearn.model_selection import train_test_split
 from src.ingestion.load_financial import load_financial_data
+from transformers import AutoModelForSequenceClassification
+
+model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
 
 data = load_financial_data()
 texts = [row["text"] for row in data]
@@ -44,3 +47,37 @@ test_dataset = SentimentDataset(test_encodings, test_labels)
 
 print(f"Train dataset size: {len(train_dataset)}")
 print(f"Sample item keys: {train_dataset[0].keys()}")
+
+from transformers import TrainingArguments, Trainer
+import numpy as np
+from sklearn.metrics import accuracy_score, f1_score
+
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    return {
+        "accuracy": accuracy_score(labels, predictions),
+        "f1": f1_score(labels, predictions, average="weighted")
+    }
+
+
+training_args = TrainingArguments(
+    output_dir="./results",
+    num_train_epochs=2,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
+    eval_strategy="epoch",
+    save_strategy="no",
+    logging_steps=50,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=test_dataset,
+    compute_metrics=compute_metrics,
+)
+
+trainer.train()
