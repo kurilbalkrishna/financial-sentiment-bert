@@ -11,3 +11,13 @@ train_texts, test_texts, train_labels, test_labels = train_test_split(
 
 print(f"Train size: {len(train_texts)}")
 print(f"Test size: {len(test_texts)}")
+
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+
+train_encodings = tokenizer(train_texts, truncation=True, padding=True, max_length=128)
+test_encodings = tokenizer(test_texts, truncation=True, padding=True, max_length=128)
+
+print("Tokenization complete.")
+print(f"Sample input_ids length: {len(train_encodings['input_ids'][0])}")
