@@ -104,4 +104,4 @@ imdb_dataset = SentimentDataset(imdb_encodings, imdb_test_labels_remapped)
 
 # Evaluate the ALREADY-TRAINED financial model on this new domain — no retraining happens here
 imdb_results = trainer.evaluate(imdb_dataset)
-print("Financial-trained model evaluated on IMDB (transfer learning test):", imdb_results)  
+print("Financial-trained model evaluated on IMDB (transfer learning test):", imdb_results)
