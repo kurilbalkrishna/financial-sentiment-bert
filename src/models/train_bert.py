@@ -1,5 +1,8 @@
 from sklearn.model_selection import train_test_split
 from src.ingestion.load_financial import load_financial_data
+from transformers import AutoModelForSequenceClassification
+
+model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
 
 data = load_financial_data()
 texts = [row["text"] for row in data]
@@ -44,3 +47,61 @@ test_dataset = SentimentDataset(test_encodings, test_labels)
 
 print(f"Train dataset size: {len(train_dataset)}")
 print(f"Sample item keys: {train_dataset[0].keys()}")
+
+from transformers import TrainingArguments, Trainer
+import numpy as np
+from sklearn.metrics import accuracy_score, f1_score
+
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    return {
+        "accuracy": accuracy_score(labels, predictions),
+        "f1": f1_score(labels, predictions, average="weighted")
+    }
+
+
+training_args = TrainingArguments(
+    output_dir="./results",
+    num_train_epochs=2,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
+    eval_strategy="epoch",
+    save_strategy="epoch",   # changed from "no" — this saves the model after each epoch
+    logging_steps=50,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=test_dataset,
+    compute_metrics=compute_metrics,
+)
+
+trainer.train()
+
+# ===== SECTION 9: Transfer Learning Test on IMDB =====
+from datasets import load_dataset
+
+# Load IMDB movie reviews dataset (a completely different domain from financial news)
+imdb = load_dataset("stanfordnlp/imdb")
+
+# Use a subset of 500 test reviews for faster evaluation
+imdb_test_texts = imdb["test"]["text"][:500]
+imdb_test_labels = imdb["test"]["label"][:500]
+
+# Remap IMDB's labels (0=negative, 1=positive) to match our model's label scheme
+# (0=negative, 1=neutral, 2=positive) — so "positive" correctly lines up with class 2
+imdb_test_labels_remapped = [0 if label == 0 else 2 for label in imdb_test_labels]
+
+# Tokenize IMDB reviews the same way as the financial data
+imdb_encodings = tokenizer(imdb_test_texts, truncation=True, padding=True, max_length=128)
+
+# Wrap in the same Dataset class used for training
+imdb_dataset = SentimentDataset(imdb_encodings, imdb_test_labels_remapped)
+
+# Evaluate the ALREADY-TRAINED financial model on this new domain — no retraining happens here
+imdb_results = trainer.evaluate(imdb_dataset)
+print("Financial-trained model evaluated on IMDB (transfer learning test):", imdb_results)  
